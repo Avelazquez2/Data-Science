@@ -1,0 +1,261 @@
+---
+title: 'TidyTuesday: Shakespeare Analysis'
+output:
+  html_document:
+    df_print: paged
+---
+
+This is my data analysis of the datasets on shakespeare for the tidytuesday of 9/17.
+First let's set up the packages I will be using for this analysis.
+
+```{r}
+install.packages("tidytuesdayR")
+library(tidytuesdayR)
+install.packages("tidyverse")
+library(tidyverse)
+install.packages("ggplot2")
+library(ggplot2)
+install.packages("SnowballC")
+library(SnowballC)
+install.packages("wordcloud")
+library(wordcloud)
+install.packages("RColorBrewer")
+library(RColorBrewer)
+install.packages("tidytext")
+library(tidytext)
+install.packages("tm")
+library(tm)
+
+```
+
+Now let's pull the datasets from the tidytuesday package.
+
+```{r}
+tt_gh <- tt_load_gh("2024-09-17")
+```
+
+Now I see that it only finds three of the datasets, I will manually add the rest and load all of them.
+
+```{r}
+hamlet <- tt_download_file(tt_gh, "hamlet.csv")
+macbeth <- tt_download_file(tt_gh, "macbeth.csv")
+romeo_juliet <- tt_download_file(tt_gh, "romeo_juliet.csv")
+julius_caesar <- read_csv("julius_caesar.csv")
+othello <- read_csv("othello.csv")
+metadata <- read_csv("metadata.csv")
+
+```
+
+Now then we will begin the analysis. I want to first look at which character had the most lines for each play. My theory is that the main characters should have the most line in their given play.
+
+First I have to set the dataframes that will be used to count the amount of line per person. 
+
+```{r}
+# Creating dataframes with the all the characters and their line counts
+line_count_hamlet <- hamlet %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+line_count_hamlet <- arrange(line_count_hamlet, -line_count)
+
+line_count_macbeth <- macbeth %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+line_count_macbeth <- arrange(line_count_macbeth, -line_count)
+
+line_count_romjul <- romeo_juliet %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+line_count_romjul <- arrange(line_count_romjul, -line_count)
+
+line_count_jc <- julius_caesar %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+line_count_jc <- line_count_jc <- arrange(line_count_jc, -line_count)
+
+line_count_othello <- othello %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+line_count_othello <- arrange(line_count_othello, -line_count)
+
+```
+
+Now let's view the dataframes as well as graph them.
+
+```{r}
+knitr::kable(line_count_hamlet[,1:2], format="html")
+ggplot(data = line_count_hamlet, aes(y=line_count,x=reorder(character, -line_count)))+geom_bar(stat='identity', aes(fill=character))+labs(title="Line Count for All Characters in Hamlet",y="Line Count", x="Character")+theme(legend.position="none", axis.text.x = element_text(angle = 90))
+
+knitr::kable(line_count_macbeth[,1:2], format="html")
+ggplot(data = line_count_macbeth, aes(y=line_count,x=reorder(character, -line_count)))+geom_bar(stat='identity', aes(fill=character))+labs(title="Line Count for All Characters in Macbeth",y="Line Count", x="Character")+theme(legend.position="none", axis.text.x = element_text(angle = 90))
+
+knitr::kable(line_count_romjul[,1:2], format="html")
+ggplot(data = line_count_romjul, aes(y=line_count,x=reorder(character, -line_count)))+geom_bar(stat='identity', aes(fill=character))+labs(title="Line Count for All Characters in Romeo and Juliet",y="Line Count", x="Character")+theme(legend.position="none", axis.text.x = element_text(angle = 90))
+
+knitr::kable(line_count_jc[,1:2], format="html")
+ggplot(data = line_count_jc, aes(y=line_count,x=reorder(character, -line_count)))+geom_bar(stat='identity', aes(fill=character))+labs(title="Line Count for All Characters in Julius Caesar",y="Line Count", x="Character")+theme(legend.position="none", axis.text.x = element_text(angle = 90))
+
+knitr::kable(line_count_othello[,1:2], format="html")
+ggplot(data = line_count_othello, aes(y=line_count,x=reorder(character, -line_count)))+geom_bar(stat='identity', aes(fill=character))+labs(title="Line Count for All Characters in Othello",y="Line Count", x="Character")+theme(legend.position="none", axis.text.x = element_text(angle = 90))
+```
+
+As we can see in Othello, Othello does not have the most even while being the  protagonist in the play. It is the antagonist that has the most lines, Iago.
+
+Next I want to check which acts have the most lines and which character in those acts have the most lines. Firstly I will analysis what acts has the most lines
+
+```{r}
+line_act_hamlet <- hamlet %>%
+  group_by(act) %>%
+  summarize(line_count = n())
+line_act_hamlet <- arrange(line_act_hamlet, -line_count)
+
+line_act_macbeth <- macbeth %>%
+  group_by(act) %>%
+  summarize(line_count = n())
+line_act_macbeth <- arrange(line_act_macbeth, -line_count)
+
+line_act_romjul <- romeo_juliet %>%
+  group_by(act) %>%
+  summarize(line_count = n())
+line_act_romjul <- arrange(line_act_romjul, -line_count)
+
+line_act_jc <- julius_caesar %>%
+  group_by(act) %>%
+  summarize(line_count = n())
+line_act_jc <- arrange(line_act_jc, -line_count)
+
+line_act_othello <- othello %>%
+  group_by(act) %>%
+  summarize(line_count = n())
+line_act_othello <- arrange(line_act_othello, -line_count)
+```
+
+Now to view the dataframe and graph them accordingly.
+
+```{r}
+line_act_hamlet[,1:2]
+ggplot(data = line_act_hamlet, aes(x=act, y=line_count))+geom_bar(stat='identity', aes(fill=act))+labs(title="Line Count for All Acts in Hamlet", x="Act", y="Line Count")+theme(legend.position="none")
+
+line_act_macbeth[,1:2]
+ggplot(data = line_act_macbeth, aes(x=act, y = line_count))+geom_bar(stat='identity', aes(fill=act))+labs(title="Line Count for All Acts in Macbeth", x="Act", y="Line Count")+theme(legend.position="none")
+
+line_act_romjul[,1:2]
+ggplot(data = line_act_romjul, aes(x=act, y=line_count))+geom_bar(stat='identity', aes(fill=act))+labs(title="Line Count for All Acts in Romeo and Juliet",x="Act", y="Line Count")+theme(legend.position="none")
+
+line_act_jc[,1:2]
+ggplot(data = line_act_jc, aes(x=act, y=line_count))+geom_bar(stat='identity', aes(fill=act))+labs(title="Line Count for All Acts in Julius Caesar",x="Act", y="Line Count")+theme(legend.position="none")
+
+line_act_othello[,1:2]
+ggplot(data = line_act_othello, aes(x=act, y=line_count))+geom_bar(stat='identity', aes(fill=act))+labs(title="Line Count for All Acts in Othello",x="Act", y="Line Count")+theme(legend.position="none")
+```
+
+We can see in that Act III tends to have the most lines except for Macbeth where it was Act IV that had the most lines. Now to see which character spoke the most in those scenes.
+
+```{r}
+act_hamlet <- hamlet %>%
+  filter(act == "Act III")
+fav_char_hamlet <- act_hamlet %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+fav_char_hamlet <- arrange(fav_char_hamlet, -line_count)
+
+act_macbeth <- macbeth %>%
+  filter(act == "Act IV")
+fav_char_macbeth <- act_macbeth %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+fav_char_macbeth <- arrange(fav_char_macbeth, -line_count)
+
+act_romjul <- romeo_juliet %>%
+  filter(act == "Act III")
+fav_char_romjul <- act_romjul %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+fav_char_romjul <- arrange(fav_char_romjul, -line_count)
+
+act_jc <- julius_caesar %>%
+  filter(act == "Act III")
+fav_char_jc <- act_jc %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+fav_char_jc <- arrange(fav_char_jc, -line_count)
+
+act_othello <- othello %>%
+  filter(act == "Act III")
+fav_char_othello <- act_othello %>%
+  group_by(character) %>%
+  summarize(line_count = n())
+fav_char_othello <- arrange(fav_char_othello, -line_count)
+```
+
+Now to find which is the character will the most lines during the acts with the most lines.
+
+```{r}
+fav_char_hamlet[1,]
+fav_char_macbeth[1,]
+fav_char_romjul[1,]
+fav_char_jc[1,]
+fav_char_othello[1,]
+```
+
+Interesting, we can see a majority of the time one of the main protagonists are mainly talking during the most vocal acts. However, two plays, Macbeth and Julius Caesar, it is Malcolm and Anthony talking the most during their plays most active act. 
+
+Looking back at the graphs with the line count for each character we can see that both of these character ranked third for their respectively plays. 
+
+Considering this, I want to look into how much these two outliers talked throughout each act to see if they talk a majority of the time in one act.
+
+First, let's start with Malcolm in Macbeth.
+```{r}
+malcolm_macbeth <- macbeth %>%
+  filter(character == "Malcolm")
+  
+mal_act_macbeth <- malcolm_macbeth %>%
+  group_by(act) %>%
+  summarize(line_count = n())
+
+malcolm_macbeth <- arrange(mal_act_macbeth, -line_count)
+
+malcolm_macbeth
+```
+
+Next, Antony in Julius Caesar.
+
+```{r}
+antony_jc <- julius_caesar %>% 
+  filter(character == "Antony")
+
+ant_act_jc <- antony_jc %>%
+  group_by(act) %>%
+  summarize(line_count = n())
+antony_jc <- arrange(ant_act_jc, -line_count)
+
+antony_jc
+```
+
+Now we can see that they did talk a majority of the talk in those acts specifically.
+
+I want to see what they were saying using a word cloud to see what words they used the most.
+
+Here is the word cloud from Julius Caesar using Antony's dialouge to fill it.
+
+```{r}
+lines_ant_jc <- julius_caesar %>% 
+  filter(character == "Antony", act == "Act III")
+
+lines_ant <- lines_ant_jc %>% 
+  unnest_tokens(word, dialogue)
+words_ant <- lines_ant$word
+
+wordcloud(words_ant)
+```
+
+Now for Malcolm in Macbeth.
+```{r}
+lines_mal_macbeth <- macbeth %>% 
+  filter(character == "Malcolm", act == "Act IV")
+
+lines_mal <- lines_mal_macbeth %>% 
+  unnest_tokens(word, dialogue)
+words_mal <- lines_mal$word
+
+wordcloud(words_mal)
+```
